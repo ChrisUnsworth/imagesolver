@@ -1,12 +1,34 @@
 import os
 from flask import Flask, request, render_template, redirect, url_for, flash, send_from_directory
 from werkzeug.utils import secure_filename
-from detector import detect_puzzle_type
-from solver import analyze_sudoku
-from mip_solver import solve_sudoku_mip
+
+from detectors.puzzle_detector import detect_puzzle_type
+from analyzers.sudoku_analyzer import analyze_sudoku
+from analyzers.queens_analyzer import analyze_queens
+from solvers.sudoku_solver import solve_sudoku
+from solvers.queens_solver import solve_queens
 
 UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp", "webp"}
+
+# Colour palette for Queens region display (up to 15 regions).
+REGION_COLORS = [
+    "#FF6B6B",  # 1  red
+    "#4ECDC4",  # 2  teal
+    "#45B7D1",  # 3  sky blue
+    "#96CEB4",  # 4  sage green
+    "#FFD93D",  # 5  yellow
+    "#C77DFF",  # 6  purple
+    "#F4A261",  # 7  orange
+    "#06D6A0",  # 8  mint
+    "#FF85A1",  # 9  pink
+    "#74B3CE",  # 10 steel blue
+    "#B5838D",  # 11 mauve
+    "#90BE6D",  # 12 lime green
+    "#F9C74F",  # 13 gold
+    "#577590",  # 14 slate
+    "#F08080",  # 15 light coral
+]
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-key"
@@ -46,7 +68,7 @@ def index():
         save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(save_path)
 
-        # Step 1: detect puzzle type
+        # ── Step 1: detect puzzle type ────────────────────────────────────────
         try:
             puzzle_info = detect_puzzle_type(save_path)
         except Exception as e:
@@ -55,7 +77,7 @@ def index():
 
         puzzle_type = puzzle_info["type"]
 
-        # Step 2: route to the appropriate handler
+        # ── Step 2: route to the appropriate handler ──────────────────────────
         if puzzle_type == "sudoku":
             try:
                 detected = analyze_sudoku(save_path)
@@ -64,9 +86,9 @@ def index():
                 return redirect(url_for("index"))
 
             try:
-                solution = solve_sudoku_mip(detected["grid"])
+                solution = solve_sudoku(detected["grid"])
             except Exception as e:
-                flash(f"MIP solver error: {e}", "error")
+                flash(f"Sudoku solver error: {e}", "error")
                 solution = None
 
             return render_template(
@@ -75,18 +97,57 @@ def index():
                 filename=filename,
                 detected=detected,
                 solution=solution,
+                queens_data=None,
+                queens_solution=None,
+                queens_colors=None,
             )
 
-        # Queens and any future unknown types — show image + detection result only
+        if puzzle_type == "queens":
+            try:
+                queens_data = analyze_queens(save_path)
+            except Exception as e:
+                flash(f"Queens analysis failed: {e}", "error")
+                return redirect(url_for("index"))
+
+            try:
+                queens_solution = solve_queens(queens_data["grid"])
+            except Exception as e:
+                flash(f"Queens solver error: {e}", "error")
+                queens_solution = None
+
+            return render_template(
+                "index.html",
+                puzzle_info=puzzle_info,
+                filename=filename,
+                detected=None,
+                solution=None,
+                queens_data=queens_data,
+                queens_solution=queens_solution,
+                queens_colors=REGION_COLORS,
+            )
+
+        # Unknown type — show image only
         return render_template(
             "index.html",
             puzzle_info=puzzle_info,
             filename=filename,
             detected=None,
             solution=None,
+            queens_data=None,
+            queens_solution=None,
+            queens_colors=None,
         )
 
-    return render_template("index.html", puzzle_info=None, filename=None, detected=None, solution=None)
+    return render_template(
+        "index.html",
+        puzzle_info=None,
+        filename=None,
+        detected=None,
+        solution=None,
+        queens_data=None,
+        queens_solution=None,
+        queens_colors=None,
+    )
 
 
 if __name__ == "__main__":

@@ -1,3 +1,10 @@
+"""
+Sudoku puzzle analyser using Claude vision.
+
+Reads an image of a sudoku puzzle and returns the detected grid as a
+9×9 array of integers (0 = empty, 1–9 = filled digit).
+"""
+
 import base64
 import json
 import mimetypes
@@ -36,7 +43,16 @@ Rules:
 
 
 def analyze_sudoku(image_path: str) -> dict:
-    client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
+    """
+    Returns:
+        {
+            "grid"         : list[list[int]] — 9×9 array (0 = empty, 1-9 = digit),
+            "filled_count" : int,
+            "empty_count"  : int,
+        }
+    Raises ValueError on malformed responses.
+    """
+    client = anthropic.Anthropic()
 
     with open(image_path, "rb") as f:
         image_data = base64.standard_b64encode(f.read()).decode("utf-8")
@@ -68,7 +84,6 @@ def analyze_sudoku(image_path: str) -> dict:
 
     response_text = message.content[0].text.strip()
 
-    # Strip markdown code fences if Claude adds them anyway
     if response_text.startswith("```"):
         lines = response_text.splitlines()
         response_text = "\n".join(lines[1:-1]).strip()

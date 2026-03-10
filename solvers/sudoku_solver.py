@@ -1,5 +1,5 @@
 """
-Sudoku MIP solver using Google OR-Tools.
+Sudoku solver using Google OR-Tools MIP.
 
 Formulation
 -----------
@@ -19,17 +19,17 @@ Objective: feasibility only (no cost term needed).
 from ortools.linear_solver import pywraplp
 
 
-def solve_sudoku_mip(grid: list[list[int]]) -> list[list[int]] | None:
+def solve_sudoku(grid: list[list[int]]) -> list[list[int]] | None:
     """
     Solve a sudoku puzzle using a MIP formulation.
 
     Parameters
     ----------
-    grid : 9x9 list of ints, 0 = empty, 1-9 = given clue.
+    grid : 9×9 list of ints, 0 = empty, 1-9 = given clue.
 
     Returns
     -------
-    9x9 list of ints with the solution, or None if infeasible / no solver available.
+    9×9 list of ints with the solution, or None if infeasible.
     """
     solver = pywraplp.Solver.CreateSolver("SCIP")
     if solver is None:

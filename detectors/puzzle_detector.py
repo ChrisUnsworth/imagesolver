@@ -82,7 +82,6 @@ def detect_puzzle_type(image_path: str) -> dict:
 
     result = json.loads(response_text)
 
-    # Normalise type to a known value
     if result.get("type") not in KNOWN_TYPES:
         result["type"] = "unknown"
 
