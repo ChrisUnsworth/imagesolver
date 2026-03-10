@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sudoku Solver</title>
+  <title>Puzzle Solver</title>
   <style>
     body {
       font-family: sans-serif;
@@ -14,6 +14,7 @@
     }
     h1 { margin-bottom: 24px; }
     h2 { margin-bottom: 12px; font-size: 1.1rem; }
+    h3 { font-size: 1rem; margin-bottom: 12px; color: #374151; }
     .card {
       background: #fff;
       border-radius: 8px;
@@ -47,14 +48,46 @@
       border-color: #fecaca;
     }
 
-    /* Side-by-side grids */
+    /* Detection badge */
+    .detection-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .badge-sudoku  { background: #dbeafe; color: #1e40af; }
+    .badge-queens  { background: #f3e8ff; color: #6b21a8; }
+    .badge-unknown { background: #f3f4f6; color: #374151; }
+
+    .detection-description {
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 0;
+    }
+
+    /* Queens / unknown — uploaded image preview */
+    .image-preview {
+      margin-top: 16px;
+      text-align: center;
+    }
+    .image-preview img {
+      max-width: 100%;
+      max-height: 520px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+
+    /* Side-by-side sudoku grids */
     .grids {
       display: flex;
       gap: 40px;
       flex-wrap: wrap;
     }
     .grid-section { flex: 1; min-width: 280px; }
-    .grid-section h3 { font-size: 1rem; margin-bottom: 12px; color: #374151; }
 
     /* Sudoku grid */
     .sudoku-grid {
@@ -70,11 +103,8 @@
       font-weight: 600;
       border: 1px solid #aaa;
     }
-    /* Clue cells (given in puzzle) */
     .sudoku-grid td.clue   { color: #1e3a8a; }
-    /* Solver-filled cells */
     .sudoku-grid td.solved { color: #15803d; }
-    /* Empty / undetected */
     .sudoku-grid td.empty  { color: #d1d5db; }
 
     /* Thick borders for 3x3 box boundaries */
@@ -99,9 +129,7 @@
       font-size: 0.8rem;
     }
     .legend-item { display: flex; align-items: center; gap: 6px; }
-    .legend-dot {
-      width: 12px; height: 12px; border-radius: 50%;
-    }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
     .dot-clue   { background: #1e3a8a; }
     .dot-solved { background: #15803d; }
 
@@ -127,7 +155,7 @@
   </style>
 </head>
 <body>
-  <h1>Sudoku Solver</h1>
+  <h1>Puzzle Solver</h1>
 
   <div class="card">
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -141,19 +169,32 @@
     {% endwith %}
 
     <form method="POST" enctype="multipart/form-data">
-      <label for="file">Upload a sudoku puzzle image:</label>
+      <label for="file">Upload a puzzle image:</label>
       <input type="file" id="file" name="file" accept="image/*">
       <button type="submit">Analyse &amp; Solve</button>
     </form>
   </div>
 
-  {% if detected %}
-  <div class="card">
-    <h2>Results — {{ filename }}</h2>
+  {% if puzzle_info %}
 
+  {# ── Detection result ──────────────────────────────────────────────────── #}
+  <div class="card">
+    <h2>Detection — {{ filename }}</h2>
+    <div class="detection-badge badge-{{ puzzle_info.type }}">
+      {% if puzzle_info.type == "sudoku" %}Sudoku
+      {% elif puzzle_info.type == "queens" %}LinkedIn Queens
+      {% else %}Unknown puzzle
+      {% endif %}
+    </div>
+    <p class="detection-description">{{ puzzle_info.description }}</p>
+  </div>
+
+  {# ── Sudoku: grids + solver ────────────────────────────────────────────── #}
+  {% if puzzle_info.type == "sudoku" and detected %}
+  <div class="card">
+    <h2>Sudoku Results</h2>
     <div class="grids">
 
-      <!-- Detected grid -->
       <div class="grid-section">
         <h3>Detected by Claude</h3>
         <table class="sudoku-grid">
@@ -171,7 +212,6 @@
         </div>
       </div>
 
-      <!-- Solved grid -->
       <div class="grid-section">
         <h3>Solved by OR-Tools MIP</h3>
         {% if solution %}
@@ -204,6 +244,17 @@
     <h2>JSON Output</h2>
     <div class="json-block">{{ {"detected": detected, "solution": solution} | tojson(indent=2) }}</div>
   </div>
+
+  {# ── Queens / unknown: show the uploaded image ─────────────────────────── #}
+  {% else %}
+  <div class="card">
+    <h2>Uploaded Image</h2>
+    <div class="image-preview">
+      <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="{{ filename }}">
+    </div>
+  </div>
+  {% endif %}
+
   {% endif %}
 </body>
 </html>
